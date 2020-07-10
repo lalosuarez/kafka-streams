@@ -26,14 +26,14 @@ public class OrderDetailsService {
     @StreamListener
     @SendTo({OrdersBinding.ORDERS_VALIDATION_OUT})
     public KStream<String, OrderValidation> validateOrder(
-            @Input(OrdersBinding.ORDERS_IN) KStream<String, Order> orders) {
+            @Input(OrdersBinding.ORDERS_IN) final KStream<String, Order> orders) {
 
         // Groups by id result and stores the result in a materialized view
         orders
                 .groupByKey(Grouped.with(Serdes.String(), new JsonSerde<>(Order.class)))
                 .aggregate(
                         Order::new,
-                        (s, order, newOrder) -> order,
+                        (key, order, newOrder) -> order,
                         Materialized.<String, Order, KeyValueStore<Bytes, byte[]>>as(OrdersBinding.ORDERS_BY_ID_STORE)
                                 .withKeySerde(Serdes.String())
                                 .withValueSerde(new JsonSerde<>(Order.class))
@@ -43,50 +43,20 @@ public class OrderDetailsService {
         orders
                 .groupBy((s, order) -> order.getCustomerId(), Grouped.with(Serdes.Long(), new JsonSerde<>(Order.class)))
                 .aggregate(
-                        Order::new,
-                        (s, order, newOrder) -> order,
-                        Materialized.<Long, Order, KeyValueStore<Bytes, byte[]>>as(OrdersBinding.ORDERS_BY_CUSTOMER_ID_STORE)
+                        OrdersByCustomer::new,
+                        (customerId, order, ordersByCustomer) -> {
+                            ordersByCustomer.getOrders().add(order);
+                            logger.debug("orders by customer id {} = {}", customerId, ordersByCustomer.getOrders().size());
+                            return ordersByCustomer;
+                        },
+                        Materialized.<Long, OrdersByCustomer, KeyValueStore<Bytes, byte[]>>as(OrdersBinding.ORDERS_BY_CUSTOMER_ID_STORE)
                                 .withKeySerde(Serdes.Long())
-                                .withValueSerde(new JsonSerde<>(Order.class))
+                                .withValueSerde(new JsonSerde<>(OrdersByCustomer.class))
                 );
 
         return orders
                 .filter((key, order) -> OrderState.CREATED.equals(order.getState()))
                 .map((key, order) -> getOrderValidationResult(order, isValid(order) ? OrderValidationResult.PASS : OrderValidationResult.FAIL));
-    }
-
-    // TODO: Move this class
-    @Component
-    public static class OrderValidationsSink {
-
-        private static final Logger logger = LoggerFactory.getLogger(OrderValidationsSink.class);
-
-        @StreamListener
-        public void process(
-                @Input(OrdersBinding.ORDERS_VALIDATION_IN) KStream<String, OrderValidation> orderValidations) {
-
-            orderValidations
-                    //.toStream()
-                    .foreach((key, orderValidation) -> logger.info("Order {} {}", key,
-                            orderValidation.getValidationResult()));
-
-            // Groups by validation status and stores the result in a materialized view
-            orderValidations
-                    .groupBy((s, orderValidation) -> orderValidation.getValidationResult().name())
-                    .count(Materialized.as(OrdersBinding.ORDERS_VALIDATION_BY_STATUS_STORE));
-
-            /*
-            orderValidations
-                    .groupByKey()
-                    .aggregate(
-                            String::new,
-                            (s, domainEvent, board) -> board.concat(domainEvent.getValidationResult().toString()),
-                            Materialized.<String, String, KeyValueStore<Bytes, byte[]>>as("test-events-snapshots")
-                                    .withKeySerde(Serdes.String()).
-                                    withValueSerde(Serdes.String())
-                    );
-            */
-        }
     }
 
     /**

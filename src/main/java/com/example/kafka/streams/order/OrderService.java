@@ -28,7 +28,7 @@ public class OrderService {
      * @param order
      * @return
      */
-    public Order createOrder(Order order) {
+    public Order createOrder(final Order order) {
         order.setId(UUID.randomUUID().toString());
         order.setState(OrderState.CREATED);
         order.setTimestamp(getTimestamp());
@@ -48,7 +48,7 @@ public class OrderService {
      * Sends a message to the broker
      * @param order
      */
-    private void sendMessage(Order order) {
+    private void sendMessage(final Order order) {
         try {
             byte[] msgKey = order.getId().getBytes();
             logger.debug("Message key bytes = {}", msgKey);

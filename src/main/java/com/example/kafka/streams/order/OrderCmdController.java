@@ -26,14 +26,8 @@ public class OrderCmdController {
         this.orderService = orderService;
     }
 
-    @RequestMapping(path = "/orders/health", method = RequestMethod.GET)
-    public ResponseEntity health() {
-        logger.info("Orders health OK");
-        return ResponseEntity.ok("OK");
-    }
-
     @RequestMapping(path = "/orders", method = RequestMethod.POST)
-    public ResponseEntity create(final @RequestBody Order order) throws URISyntaxException {
+    public ResponseEntity create(@RequestBody final Order order) throws URISyntaxException {
         logger.info("Creating order {}", order);
         orderService.createOrder(order);
         return ResponseEntity.created(new URI("http://localhost:8084/v1/orders/" + order.getId())).build();
