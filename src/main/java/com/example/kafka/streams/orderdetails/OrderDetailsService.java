@@ -28,7 +28,7 @@ public class OrderDetailsService {
     public KStream<String, OrderValidation> validateOrder(
             @Input(OrdersBinding.ORDERS_IN) final KStream<String, Order> orders) {
 
-        // Groups by id result and stores the result in a materialized view
+        // Groups by id and stores the result in a materialized view
         orders
                 .groupByKey(Grouped.with(Serdes.String(), new JsonSerde<>(Order.class)))
                 .aggregate(
@@ -39,7 +39,7 @@ public class OrderDetailsService {
                                 .withValueSerde(new JsonSerde<>(Order.class))
                 );
 
-        // Groups by id result and stores the result in a materialized view
+        // Groups by customer id and stores the result in a materialized view
         orders
                 .groupBy((s, order) -> order.getCustomerId(), Grouped.with(Serdes.Long(), new JsonSerde<>(Order.class)))
                 .aggregate(

@@ -1,12 +1,8 @@
 package com.example.kafka.streams.order;
 
 import com.example.kafka.streams.OrdersBinding;
+import com.example.kafka.streams.orderdetails.OrderValidation;
 import com.example.kafka.streams.orderdetails.OrdersByCustomer;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.ToString;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.state.KeyValueIterator;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
@@ -40,8 +36,26 @@ public class OrderQryController {
         this.interactiveQueryService = interactiveQueryService;
     }
 
+    @RequestMapping(path = "/orders/validations", method = RequestMethod.GET)
+    public ResponseEntity ordersValidation() {
+        logger.info("Getting orders validation");
+
+        final ReadOnlyKeyValueStore<String, OrderValidation> store = interactiveQueryService
+                .getQueryableStore(OrdersBinding.ORDERS_VALIDATION_BY_ID_STORE,
+                        QueryableStoreTypes.keyValueStore());
+
+        final List<OrderValidation> list = new LinkedList<>();
+        final KeyValueIterator<String, OrderValidation> iterator = store.all();
+        while (iterator.hasNext()) {
+            KeyValue<String, OrderValidation> item = iterator.next();
+            list.add(item.value);
+        }
+        return ResponseEntity.ok()
+                .body(new ListResponse<>((long) list.size(), list));
+    }
+
     @RequestMapping(path = "/orders/validations/status", method = RequestMethod.GET)
-    public ResponseEntity orderValidationByStatus() {
+    public ResponseEntity ordersValidationByStatus() {
         logger.info("Getting orders validation count");
 
         final ReadOnlyKeyValueStore<String, Long> store = interactiveQueryService
@@ -73,7 +87,7 @@ public class OrderQryController {
             list.add(item.value);
         }
         return ResponseEntity.ok()
-                .body(new OrderListResponse((long)list.size(), list));
+                .body(new ListResponse((long)list.size(), list));
     }
 
     @RequestMapping(path = "/orders/customers/{id}", method = RequestMethod.GET)
@@ -90,17 +104,7 @@ public class OrderQryController {
         }
 
         return ResponseEntity.ok()
-                .body(new OrderListResponse((long)ordersByCustomer.getOrders().size(),
+                .body(new ListResponse((long)ordersByCustomer.getOrders().size(),
                         ordersByCustomer.getOrders()));
-    }
-
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @ToString
-    class OrderListResponse {
-        private Long total;
-        private List<Order> orders;
     }
 }

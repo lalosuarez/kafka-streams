@@ -1,12 +1,17 @@
 package com.example.kafka.streams.orderdetails;
 
 import com.example.kafka.streams.OrdersBinding;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
+import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.annotation.Input;
 import org.springframework.cloud.stream.annotation.StreamListener;
+import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -24,5 +29,16 @@ public class OrderValidationsSink {
                         orderValidation.getValidationResult()))
                 .groupBy((key, orderValidation) -> orderValidation.getValidationResult().name())
                 .count(Materialized.as(OrdersBinding.ORDERS_VALIDATION_BY_STATUS_STORE));
+
+        // Groups by id and stores the result in a materialized view
+        orderValidations
+                .groupByKey(Grouped.with(Serdes.String(), new JsonSerde<>(OrderValidation.class)))
+                .aggregate(
+                        OrderValidation::new,
+                        (key, orderValidation, newOrderValidation) -> orderValidation,
+                        Materialized.<String, OrderValidation, KeyValueStore<Bytes, byte[]>>as(OrdersBinding.ORDERS_VALIDATION_BY_ID_STORE)
+                                .withKeySerde(Serdes.String())
+                                .withValueSerde(new JsonSerde<>(OrderValidation.class))
+                );
     }
 }

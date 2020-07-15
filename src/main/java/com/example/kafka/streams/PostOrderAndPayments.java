@@ -55,6 +55,6 @@ public class PostOrderAndPayments implements ApplicationRunner {
             }
         };
         Executors.newScheduledThreadPool(1)
-                .scheduleAtFixedRate(runnable, 3, 10, TimeUnit.SECONDS);
+                .scheduleAtFixedRate(runnable, 3, 30, TimeUnit.SECONDS);
     }
 }

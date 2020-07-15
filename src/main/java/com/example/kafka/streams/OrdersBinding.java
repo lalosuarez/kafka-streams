@@ -9,7 +9,7 @@ import org.springframework.messaging.MessageChannel;
 
 public interface OrdersBinding {
     // Stores for materialized views
-    String ORDERS_VALIDATION_STORE = "ORDERS_VALIDATION_STORE";
+    String ORDERS_VALIDATION_BY_ID_STORE = "ORDERS_VALIDATION_BY_ID_STORE";
     String ORDERS_VALIDATION_BY_STATUS_STORE = "ORDERS_VALIDATION_BY_STATUS_STORE";
     String ORDERS_BY_ID_STORE = "ORDERS_BY_ID_STORE";
     String ORDERS_BY_CUSTOMER_ID_STORE = "ORDERS_BY_CUSTOMER_ID_STORE";
